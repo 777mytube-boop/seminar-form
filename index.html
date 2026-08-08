@@ -284,6 +284,22 @@
   <!-- STEP2 -->
   <div class="card">
     <div class="step">STEP2</div><h2>症状</h2>
+
+    <details class="fold" id="askFold">
+      <summary>💡 問診の7つのコツ（聞き方の技術）　<span class="opt">クリックで開閉</span></summary>
+      <p class="hint">「何を聞くか」より「どう聞いて、どう読み取るか」。下の視点で聞くと、症状から“どんな負荷がかかっているか”を逆算できます。学習補助であり診断ではありません。</p>
+      <ol style="margin:6px 0 0 1.1em;padding:0;line-height:1.7;font-size:14px">
+        <li style="margin-bottom:6px"><b>痛い場所を“手で”示させる</b>：指1本＝狭い範囲／手のひら＝広い範囲／示せない＝関節の奥・神経・動かすと出る痛みかも。</li>
+        <li style="margin-bottom:6px"><b>「いつから」を3つに仕分け</b>：急性期／回復期／慢性期。次回との比較（効果判定）の基準にもなります。</li>
+        <li style="margin-bottom:6px"><b>外傷か、使いすぎ（障害）か</b>：ぶつけた等のケガか、繰り返しの負担か。ケガの後の二次的な痛みも見ます。</li>
+        <li style="margin-bottom:6px"><b>どの動作・場面で出るか＝悪化と緩解の条件（★最重要）</b>：動作から「どんな負荷がかかっているか」を逆算します。</li>
+        <li style="margin-bottom:6px"><b>「動き始めが痛い」か「続けると出る」か</b>：動き始め＝滑りの問題（古いドア）／続けて出る＝力学的な負担。</li>
+        <li style="margin-bottom:6px"><b>どのように痛むか（痛みの言葉）</b>：ズキズキ・張る・ざわざわ等。しびれ様の表現は神経の関与を疑う手がかり。</li>
+        <li style="margin-bottom:6px"><b>痛みの強さを数字にする（NRS 0〜10）</b>：主観を数値化すると、前回との比較・共有ができます。</li>
+      </ol>
+      <p class="hint" style="margin-top:6px">＋α　問診は「どこを評価するか」を決める羅針盤。<b>「どう治すか」の前に「どこを治すか」。</b></p>
+    </details>
+
     <label for="s2_chief">主訴（患者本人が困っている症状）<span class="opt">任意</span></label>
     <input type="text" id="s2_chief" placeholder="例：歩くと右膝の内側が痛い">
     <div class="grid2">
@@ -296,6 +312,11 @@
         <input type="text" id="s2_trigger" placeholder="例：立脚後期・階段下り">
       </div>
     </div>
+
+    <label style="margin-top:12px">その他の症状（主訴以外・1つずつ追加）<span class="opt">任意</span></label>
+    <p class="hint">主訴のほかに気になる症状を1つずつ追加できます。強さ（NRS）や「どの動作・どの場面で・どう痛むか」を添えると、負荷の見立てにつながります。<br>例：夜間の右肩のうずき ／ NRS4 ／ 寝返りでズキッと</p>
+    <table class="mini"><thead><tr><th class="colpart">症状・部位</th><th class="colside">NRS</th><th>出る場面・どう痛むか</th><th></th></tr></thead><tbody id="symp2Rows"></tbody></table>
+    <button type="button" class="add" id="symp2Add">＋ 症状を追加</button>
   </div>
 
   <!-- STEP3 -->
@@ -838,6 +859,33 @@ el("romPickAdd").onclick = function(){ var r=el("romPick").value; if(!r){ return
 el("mmtPickAdd").onclick = function(){ var r=el("mmtPick").value; if(!r){ return; } appendPreset("mmtRows",r); el("mmtFold").open=true; };
 el("romBook").onclick = function(){ goBook(el("romPick").value); };
 el("mmtBook").onclick = function(){ goBook(el("mmtPick").value); };
+
+/* ---- STEP2 その他の症状 動的行 ---- */
+function addSymp2(data){
+  data = data || {};
+  var tr = ce("tr","dynrow");
+  tr.innerHTML =
+    '<td><input type="text" class="sp_name" placeholder="例：夜間の右肩のうずき"></td>'+
+    '<td><input type="number" class="sp_nrs" min="0" max="10" step="1" placeholder="0〜10"></td>'+
+    '<td><input type="text" class="sp_when" placeholder="例：寝返りでズキッと"></td>'+
+    '<td><button type="button" class="rm">×</button></td>';
+  tr.querySelector(".sp_name").value = data.name||"";
+  tr.querySelector(".sp_nrs").value = data.nrs||"";
+  tr.querySelector(".sp_when").value = data.when||"";
+  tr.querySelector(".rm").onclick = function(){ tr.remove(); save(); };
+  el("symp2Rows").appendChild(tr);
+}
+function readSymp2(){
+  var out=[];
+  el("symp2Rows").querySelectorAll(".dynrow").forEach(function(tr){
+    var n=tr.querySelector(".sp_name").value.trim(),
+        r=tr.querySelector(".sp_nrs").value.trim(),
+        w=tr.querySelector(".sp_when").value.trim();
+    if(n||r||w) out.push({name:n,nrs:r,when:w});
+  });
+  return out;
+}
+el("symp2Add").onclick = function(){ addSymp2(); save(); };
 /* 部位を選ぶと、ブック確認ボタンにその部位名を表示 */
 function syncBookBtn(selId, btnId){
   var s=el(selId), b=el(btnId); if(!s||!b) return;
@@ -1037,6 +1085,7 @@ function currentState(){
   o.hx = readChecks("hx_", HX_ITEMS.length);
   o.rf = readChecks("rf_", RF_ITEMS.length);
   o.rom = readRows("romRows"); o.mmt = readRows("mmtRows"); o.hv = readHv();
+  o.symp2 = readSymp2();
   o.rec = recData.slice();
   o.recR = recRegions.slice();
   o.sym = readSym();
@@ -1068,6 +1117,9 @@ function restore(){
   if(o&&o.mmt&&o.mmt.length){ o.mmt.forEach(function(x){ addRow("mmtRows",x); }); }
   else { addRow("mmtRows"); }
   el("hvBlocks").innerHTML=""; (o&&o.hv&&o.hv.length?o.hv:[null]).forEach(function(x){ addHv(x); });
+  el("symp2Rows").innerHTML="";
+  if(o&&o.symp2&&o.symp2.length){ o.symp2.forEach(function(x){ addSymp2(x); }); }
+  else { addSymp2(); }
   applyRegion(); updateRfBanner();
 }
 
@@ -1114,7 +1166,18 @@ function build(){
   L.push("STEP0 今日相談したいこと："+vb("s0_topic")); L.push("");
   L.push("STEP1 上位ゴール："+vb("s1_goal")); L.push("　指標："+vb("s1_metric")); L.push("");
   L.push("STEP2 症状");
-  L.push("　主訴："+vb("s2_chief")); L.push("　強さ(NRS)："+vb("s2_nrs")); L.push("　誘発条件："+vb("s2_trigger")); L.push("");
+  L.push("　主訴："+vb("s2_chief")); L.push("　強さ(NRS)："+vb("s2_nrs")); L.push("　誘発条件："+vb("s2_trigger"));
+  var sy2=readSymp2();
+  if(sy2.length){
+    L.push("　その他の症状：");
+    sy2.forEach(function(s){
+      var t="　・"+(s.name||"（症状名なし）");
+      if(s.nrs) t+="（NRS"+s.nrs+"）";
+      if(s.when) t+=" ／"+s.when;
+      L.push(t);
+    });
+  } else { L.push("　その他の症状：なし／未記入"); }
+  L.push("");
   L.push("STEP3 これまでの経過（時期／やったこと／狙った仮説／症状の変化）");
   L.push(vb("s3_history")); L.push("");
   L.push("STEP4 現状評価");

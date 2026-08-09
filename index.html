@@ -65,6 +65,17 @@
   .chips{display:flex;flex-wrap:wrap;gap:6px;margin:.35em 0;}
   .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 11px;font-size:.82rem;cursor:pointer;color:var(--sub);}
   .chip:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+  .chip.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;}
+  .sympcard{border:1px solid var(--line);border-radius:12px;padding:12px;margin:.55em 0;background:#fff;}
+  .sympcard .sptop{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .sympcard .sp_name{flex:1 1 200px;}
+  .sympcard .sp_nrs{width:78px;}
+  .charq{margin:.5em 0;}
+  .charq>.qlabel{font-size:.85rem;color:var(--sub);font-weight:600;margin-bottom:2px;}
+  .charhint{display:none;font-size:.8rem;color:var(--accent);margin-top:3px;line-height:1.5;}
+  body.hintOn .charhint.has{display:block;}
+  .hinttoggle{display:flex;align-items:center;gap:8px;margin:.5em 0;font-size:.85rem;color:var(--sub);background:var(--accent-soft);padding:7px 10px;border-radius:8px;}
+  .hinttoggle label{display:flex;align-items:center;gap:6px;cursor:pointer;margin:0;}
   .checks{display:flex;flex-wrap:wrap;gap:8px 16px;margin:.3em 0;}
   .checks label{display:flex;gap:7px;align-items:center;font-weight:500;font-size:.88rem;margin:0;}
   .checks input{width:16px;height:16px;}
@@ -300,6 +311,10 @@
       <p class="hint" style="margin-top:6px">＋α　問診は「どこを評価するか」を決める羅針盤。<b>「どう治すか」の前に「どこを治すか」。</b></p>
     </details>
 
+    <div class="hinttoggle">
+      <label><input type="checkbox" id="tissueHint"> 指導者用：選んだ特徴の「候補組織」を表示する</label>
+    </div>
+
     <label for="s2_chief">主訴（患者本人が困っている症状）<span class="opt">任意</span></label>
     <input type="text" id="s2_chief" placeholder="例：歩くと右膝の内側が痛い">
     <div class="grid2">
@@ -312,11 +327,16 @@
         <input type="text" id="s2_trigger" placeholder="例：立脚後期・階段下り">
       </div>
     </div>
+    <details class="fold" id="chiefCharFold">
+      <summary>主訴の特徴を選ぶ（任意・選ぶほど組織を絞りやすい）　<span class="opt">クリックで開閉</span></summary>
+      <p class="hint">当てはまる特徴を選んでください（複数可・もう一度押すと解除）。組織学的推論（範囲・性状）を先に、力学（負荷）を後に当てると絞りやすい。学習補助であり診断ではありません。</p>
+      <div id="chiefChars"></div>
+    </details>
 
-    <label style="margin-top:12px">その他の症状（主訴以外・1つずつ追加）<span class="opt">任意</span></label>
-    <p class="hint">主訴のほかに気になる症状を1つずつ追加できます。強さ（NRS）や「どの動作・どの場面で・どう痛むか」を添えると、負荷の見立てにつながります。<br>例：夜間の右肩のうずき ／ NRS4 ／ 寝返りでズキッと</p>
-    <table class="mini"><thead><tr><th class="colpart">症状・部位</th><th class="colside">NRS</th><th>出る場面・どう痛むか</th><th></th></tr></thead><tbody id="symp2Rows"></tbody></table>
-    <button type="button" class="add" id="symp2Add">＋ 症状を追加</button>
+    <label style="margin-top:12px">その他の症状（主訴以外・1つずつカードで追加）<span class="opt">任意</span></label>
+    <p class="hint">主訴のほかに気になる症状を1つずつカードで追加できます。特徴を選ぶと負荷・組織の見立てにつながります。<br>例：夜間の右肩のうずき ／ NRS4 ／ 寝返りでズキッと</p>
+    <div id="symp2Rows"></div>
+    <button type="button" class="add" id="symp2Add">＋ 症状カードを追加</button>
   </div>
 
   <!-- STEP3 -->
@@ -860,32 +880,114 @@ el("mmtPickAdd").onclick = function(){ var r=el("mmtPick").value; if(!r){ return
 el("romBook").onclick = function(){ goBook(el("romPick").value); };
 el("mmtBook").onclick = function(){ goBook(el("mmtPick").value); };
 
-/* ---- STEP2 その他の症状 動的行 ---- */
+/* ---- STEP2 症状カード（書籍根拠の特徴チップ・C案トグル） ---- */
+/* 出典：範囲/タイミング/きっかけ/性状＝園部『臨床膝関節』第2章 図2-19・表2-1・問診／負荷＝ガイドブックⅡ第1章／安静夜間＝図2-19・表2-1。ヒントは指導者用のみ表示、出力には書名も候補組織も出さない。 */
+var CHAR_DEF=[
+ {axis:"area",q:"痛むところを、どう示せる？",opts:[
+   {id:"area_point",l:"指で1点",h:"脂肪体・半月板・腱・靭帯・滑液包"},
+   {id:"area_palm",l:"手のひらで広く",h:"筋・筋膜／末梢神経・皮神経／腫れた半月板"},
+   {id:"area_none",l:"示せない・奥のほう",h:"関節内（関節包・滑膜）／神経障害"}]},
+ {axis:"timing",q:"いつ出る？",opts:[
+   {id:"timing_start",l:"動き始め",h:"滑走障害・癒着（脂肪体・筋膜・関節包）"},
+   {id:"timing_sustained",l:"続けた結果",h:"力学的負荷（腱・筋・軟骨・滑液包）"}]},
+ {axis:"trigger",q:"きっかけは？",opts:[
+   {id:"trigger_trauma",l:"1回の外力（外傷）",h:"靭帯・半月板・骨（重症は医師へ）"},
+   {id:"trigger_overuse",l:"使いすぎ（障害）",h:"腱・筋・付着部・軟骨・滑液包"},
+   {id:"trigger_chronic",l:"慢性的",h:"線維化・癒着の滑走障害／痛覚変調性も"}]},
+ {axis:"seijou",q:"どんな痛み？（性状）",opts:[
+   {id:"seijou_inflam",l:"じんじん・刺す",h:"炎症性（脂肪体・滑膜・靭帯・滑液包の急性期）"},
+   {id:"seijou_adhesion",l:"張る・詰まる・力むと痛い",h:"癒着・滑走障害（脂肪体・筋膜・関節包）"},
+   {id:"seijou_nerve",l:"じりじり・チクチク・ざわざわ",h:"神経障害（末梢神経・皮神経・神経根）"}]},
+ {axis:"load",q:"どんな力で悪化？",opts:[
+   {id:"load_stretch",l:"伸ばすと",h:"靭帯・筋/筋膜・腱"},
+   {id:"load_friction",l:"こすれると",h:"滑液包・腱"},
+   {id:"load_compress",l:"潰す・体重をかけると",h:"軟骨・半月板・脂肪体（体重だけで痛いなら骨→医師へ）"},
+   {id:"load_contract",l:"力を入れると",h:"腱・筋/筋膜"}]},
+ {axis:"rest",q:"安静時・夜間は？",opts:[
+   {id:"rest_none",l:"動かなければ痛くない",h:"力学的負荷が主体（機械的な痛み）"},
+   {id:"rest_inflam",l:"安静時もうずく",h:"炎症の強い状態（急性期）"},
+   {id:"rest_redflag",l:"夜も強い・体重だけで痛い",h:"⚠要注意：骨壊死・疲労骨折など重篤疾患を除外→医師へ"}]}
+];
+function charGroup(axis){ for(var i=0;i<CHAR_DEF.length;i++){ if(CHAR_DEF[i].axis===axis) return CHAR_DEF[i]; } return null; }
+function charOpt(axis,id){ var g=charGroup(axis); if(!g) return null; for(var i=0;i<g.opts.length;i++){ if(g.opts[i].id===id) return g.opts[i]; } return null; }
+function charLabel(axis,id){ var o=charOpt(axis,id); return o?o.l:id; }
+function charHint(axis,id){ var o=charOpt(axis,id); return o?o.h:""; }
+function updHint(chips,hint){
+  var on=chips.querySelectorAll(".chip.on"), hs=[];
+  on.forEach(function(b){ var h=charHint(b.getAttribute("data-axis"),b.getAttribute("data-id")); if(h) hs.push(h); });
+  if(hs.length){ hint.textContent="→ 候補："+hs.join(" ／ "); hint.classList.add("has"); }
+  else { hint.textContent=""; hint.classList.remove("has"); }
+}
+function buildChars(container,data){
+  if(!container) return;
+  container.innerHTML=""; data=data||{};
+  CHAR_DEF.forEach(function(d){
+    var q=ce("div","charq");
+    var lab=ce("div","qlabel"); lab.textContent=d.q; q.appendChild(lab);
+    var chips=ce("div","chips");
+    var hint=ce("div","charhint");
+    var sel=data[d.axis]||[];
+    d.opts.forEach(function(o){
+      var b=ce("button","chip"); b.type="button"; b.textContent=o.l;
+      b.setAttribute("data-axis",d.axis); b.setAttribute("data-id",o.id);
+      if(sel.indexOf(o.id)!==-1) b.classList.add("on");
+      b.onclick=function(){ b.classList.toggle("on"); updHint(chips,hint); save(); };
+      chips.appendChild(b);
+    });
+    q.appendChild(chips); q.appendChild(hint);
+    container.appendChild(q);
+    updHint(chips,hint);
+  });
+}
+function readChars(container){
+  var out={}; if(!container) return out;
+  container.querySelectorAll(".chip.on").forEach(function(b){
+    var a=b.getAttribute("data-axis"); (out[a]=out[a]||[]).push(b.getAttribute("data-id"));
+  });
+  return out;
+}
+function charsToText(ch){
+  ch=ch||{}; var parts=[];
+  CHAR_DEF.forEach(function(d){
+    var ids=ch[d.axis]||[];
+    if(ids.length){ parts.push(d.q.replace(/[？?]/g,"")+"＝"+ids.map(function(id){return charLabel(d.axis,id);}).join("・")); }
+  });
+  return parts.join(" ／ ");
+}
+function readChiefChars(){ return readChars(el("chiefChars")); }
+
 function addSymp2(data){
   data = data || {};
-  var tr = ce("tr","dynrow");
-  tr.innerHTML =
-    '<td><input type="text" class="sp_name" placeholder="例：夜間の右肩のうずき"></td>'+
-    '<td><input type="number" class="sp_nrs" min="0" max="10" step="1" placeholder="0〜10"></td>'+
-    '<td><input type="text" class="sp_when" placeholder="例：寝返りでズキッと"></td>'+
-    '<td><button type="button" class="rm">×</button></td>';
-  tr.querySelector(".sp_name").value = data.name||"";
-  tr.querySelector(".sp_nrs").value = data.nrs||"";
-  tr.querySelector(".sp_when").value = data.when||"";
-  tr.querySelector(".rm").onclick = function(){ tr.remove(); save(); };
-  el("symp2Rows").appendChild(tr);
+  var card = ce("div","sympcard dynrow");
+  card.innerHTML =
+    '<div class="sptop">'+
+      '<input type="text" class="sp_name" placeholder="症状・部位（例：夜間の右肩のうずき）">'+
+      '<input type="number" class="sp_nrs" min="0" max="10" step="1" placeholder="NRS">'+
+      '<button type="button" class="rm">×</button>'+
+    '</div>'+
+    '<input type="text" class="sp_when" placeholder="出る場面・どう痛むか（例：寝返りでズキッと）" style="margin-top:6px">'+
+    '<div class="sp_chars" style="margin-top:6px"></div>';
+  card.querySelector(".sp_name").value = data.name||"";
+  card.querySelector(".sp_nrs").value = data.nrs||"";
+  card.querySelector(".sp_when").value = data.when||"";
+  card.querySelector(".rm").onclick = function(){ card.remove(); save(); };
+  el("symp2Rows").appendChild(card);
+  buildChars(card.querySelector(".sp_chars"), data.chars||{});
+  card.querySelectorAll("input").forEach(function(i){ i.addEventListener("input", save); });
 }
 function readSymp2(){
   var out=[];
-  el("symp2Rows").querySelectorAll(".dynrow").forEach(function(tr){
-    var n=tr.querySelector(".sp_name").value.trim(),
-        r=tr.querySelector(".sp_nrs").value.trim(),
-        w=tr.querySelector(".sp_when").value.trim();
-    if(n||r||w) out.push({name:n,nrs:r,when:w});
+  el("symp2Rows").querySelectorAll(".dynrow").forEach(function(card){
+    var n=card.querySelector(".sp_name").value.trim(),
+        r=card.querySelector(".sp_nrs").value.trim(),
+        w=card.querySelector(".sp_when").value.trim(),
+        ch=readChars(card.querySelector(".sp_chars"));
+    if(n||r||w||Object.keys(ch).length) out.push({name:n,nrs:r,when:w,chars:ch});
   });
   return out;
 }
 el("symp2Add").onclick = function(){ addSymp2(); save(); };
+(function(){ var t=el("tissueHint"); if(t){ t.onchange=function(){ document.body.classList.toggle("hintOn", t.checked); save(); }; } })();
 /* 部位を選ぶと、ブック確認ボタンにその部位名を表示 */
 function syncBookBtn(selId, btnId){
   var s=el(selId), b=el(btnId); if(!s||!b) return;
@@ -1086,6 +1188,8 @@ function currentState(){
   o.rf = readChecks("rf_", RF_ITEMS.length);
   o.rom = readRows("romRows"); o.mmt = readRows("mmtRows"); o.hv = readHv();
   o.symp2 = readSymp2();
+  o.s2chiefChars = readChiefChars();
+  o.tissueHint = el("tissueHint") ? el("tissueHint").checked : false;
   o.rec = recData.slice();
   o.recR = recRegions.slice();
   o.sym = readSym();
@@ -1120,6 +1224,8 @@ function restore(){
   el("symp2Rows").innerHTML="";
   if(o&&o.symp2&&o.symp2.length){ o.symp2.forEach(function(x){ addSymp2(x); }); }
   else { addSymp2(); }
+  buildChars(el("chiefChars"), (o&&o.s2chiefChars)||{});
+  var th=el("tissueHint"); if(th){ th.checked=!!(o&&o.tissueHint); document.body.classList.toggle("hintOn", th.checked); }
   applyRegion(); updateRfBanner();
 }
 
@@ -1167,6 +1273,7 @@ function build(){
   L.push("STEP1 上位ゴール："+vb("s1_goal")); L.push("　指標："+vb("s1_metric")); L.push("");
   L.push("STEP2 症状");
   L.push("　主訴："+vb("s2_chief")); L.push("　強さ(NRS)："+vb("s2_nrs")); L.push("　誘発条件："+vb("s2_trigger"));
+  var ccTxt=charsToText(readChiefChars()); if(ccTxt) L.push("　主訴の特徴："+ccTxt);
   var sy2=readSymp2();
   if(sy2.length){
     L.push("　その他の症状：");
@@ -1175,6 +1282,7 @@ function build(){
       if(s.nrs) t+="（NRS"+s.nrs+"）";
       if(s.when) t+=" ／"+s.when;
       L.push(t);
+      var ct=charsToText(s.chars); if(ct) L.push("　　特徴："+ct);
     });
   } else { L.push("　その他の症状：なし／未記入"); }
   L.push("");

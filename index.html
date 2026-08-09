@@ -90,6 +90,28 @@
   .hvbtns{display:flex;gap:6px;flex-wrap:wrap;}
   button.mv{border-color:#bcd8b6;color:#2e7d32;padding:5px 10px;font-size:.8rem;}
   button.mv:hover{background:#eaf5e9;}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:.4em 0;flex-wrap:wrap;}
+  .segbtn{border:none;border-radius:0;background:#fff;color:var(--sub);padding:8px 14px;font-size:.83rem;font-weight:600;border-right:1px solid var(--line);}
+  .segbtn:last-child{border-right:none;}
+  .segbtn.on{background:var(--accent);color:#fff;}
+  .s3card{border:1px solid var(--line);border-radius:12px;padding:12px;margin:.55em 0;background:#fff;}
+  .s3card .s3top{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .s3card .s3_when{flex:1 1 160px;}
+  .s3card .s3_mname{flex:1 1 160px;}
+  .s3grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;}
+  @media(max-width:560px){.s3grid{grid-template-columns:1fr;}}
+  .s3lbl{font-size:.8rem;color:var(--sub);font-weight:600;margin:8px 0 2px;}
+  button.todaybtn{border-color:#bcd8b6;color:#2e7d32;padding:6px 11px;font-size:.8rem;}
+  button.todaybtn:hover{background:#eaf5e9;}
+  .caserow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .casesel{flex:1 1 200px;min-width:160px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;font-family:inherit;font-size:.9rem;}
+  .cardhead{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;}
+  .cardhead .headtxt{flex:1 1 auto;}
+  .cardhead .headtxt h2{margin:.1em 0 0;}
+  .cardhead .caret{flex:0 0 auto;color:var(--sub);font-size:.95rem;transition:transform .15s;}
+  .card.collapsed .cardhead .caret{transform:rotate(-90deg);}
+  .card.collapsed .cardhead .headtxt h2{margin:.1em 0;}
+  .card.collapsed .cardbody{display:none;}
   .savenote{font-size:.8rem;color:var(--sub);margin-left:auto;}
   #outbox{display:none;margin-top:14px;}
   #output{width:100%;min-height:320px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.82rem;line-height:1.6;}
@@ -111,6 +133,8 @@
   details.fold>summary::-webkit-details-marker{display:none;}
   details.fold>summary::before{content:"▸ ";color:var(--accent);}
   details.fold[open]>summary::before{content:"▾ ";}
+  details.fold .foldbody{padding-bottom:10px;}
+  details.fold .foldbody .hint{margin:.5em 0;}
   .reclist{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:.3em 0;background:#f7f9fc;min-height:2.4em;}
   .recempty{color:var(--sub);font-size:.85rem;padding:4px 2px;}
   .recrow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 2px;border-bottom:1px dashed var(--line);font-size:.9rem;}
@@ -203,6 +227,7 @@
     .then(function(r){ if(!r.ok) throw new Error("http "+r.status); return r.json(); })
     .then(function(cfg){
       CFG=cfg;
+      try{ window.__FORMCFG = cfg; }catch(e){}
       if(cfg.enabled===false){ showStopped(cfg.message||"このフォームは現在停止中です。管理者にお問い合わせください。"); }
       else { showLogin(cfg.message||null); }
     })
@@ -214,7 +239,7 @@
 </script>
 <div class="wrap">
   <h1>症例入力フォーム（STEP0〜7）<span style="font-size:.8rem;color:var(--sub)">v3</span></h1>
-  <p class="lead">指導者に相談する前の「壁打ち」用の下書きを作るフォームです。入力すると、そのまま壁打ちLMに貼れる症例テキストが下に生成されます。<b>必須項目はありません。</b>途中まででも「症例テキストを生成」でき、未入力は出力に印が付いて、次の分析AIが「ここが足りない」と教えてくれます。<b>これは学習補助であり診断ではありません。</b>入力は自動保存され、この端末のブラウザ内だけに残ります（外部送信しません）。</p>
+  <p class="lead">指導者に相談する前の「壁打ち」用の下書きを作るフォームです。入力すると、そのまま壁打ちLMに貼れる症例テキストが下に生成されます。<b>必須項目はありません。</b>途中まででも「症例テキストを生成」でき、未入力は出力に印が付いて、次の分析AIが「ここが足りない」と教えてくれます。<b>これは学習補助であり診断ではありません。</b>入力は自動保存され、この端末のブラウザ内に残ります。<b>「提出」ボタンを押したときだけ</b>、氏名などを含まない症例テキストと使い方の記録が指導者に送られます（それ以外は外部送信しません）。症例はいくつでも作れて、切り替え・書き出し（バックアップ）ができます。</p>
 
   <!-- 安全確認（非ブロック） -->
   <div class="card guard">
@@ -226,6 +251,41 @@
     <p class="hint" style="margin-top:8px;">第三者のAIに渡す前の確認です。年齢・部位・数値・動作レベルだけで書いてください。チェックは任意ですが、未チェックのまま生成すると出力の先頭に注意が付きます。</p>
     <label for="g_nick">記入者（ニックネーム）<span class="opt">任意</span></label>
     <input type="text" id="g_nick" placeholder="例：ベー（施設名は書かない）">
+  </div>
+
+  <!-- 症例の管理（複数保存・切替・書き出し／読み込み） -->
+  <div class="card" style="border-color:#cdb7ec;">
+    <div class="step">症例の管理</div>
+    <h2>いま編集している症例</h2>
+    <p class="hint">症例はいくつでも作れます。切り替えても、それぞれの入力はこの端末に残ります。大事な記録は<b>「書き出し」でファイル保存（バックアップ）</b>しておくと、端末が変わっても「読み込み」で復元できます。</p>
+    <div class="caserow">
+      <select id="caseSel" class="casesel" title="編集する症例を選ぶ"></select>
+      <button type="button" class="mini" id="caseNew">＋新しい症例</button>
+      <button type="button" class="mini" id="caseRename">名前を変更</button>
+      <button type="button" class="mini" id="caseDup">複製</button>
+      <button type="button" class="mini" id="caseDel">削除</button>
+    </div>
+    <div class="caserow" style="margin-top:8px;">
+      <button type="button" class="mini" id="caseExport">この症例を書き出し（バックアップ）</button>
+      <button type="button" class="mini" id="caseExportAll">全部まとめて書き出し</button>
+      <button type="button" class="mini" id="caseImport">ファイルから読み込み</button>
+      <input type="file" id="caseImportFile" accept="application/json,.json" style="display:none;">
+    </div>
+    <p class="hint" id="caseMeta" style="margin-top:6px;"></p>
+    <details class="fold" id="caseHelpFold" style="margin-top:8px;">
+      <summary>各ボタンの意味と使い方（クリックで開閉）　<span class="opt">はじめての方はここ</span></summary>
+      <div class="foldbody">
+        <p class="hint"><b>症例を選ぶ（プルダウン）</b><br>保存してある症例を切り替えます。選んだ症例の内容がフォームに読み込まれます。切り替えても、それぞれの入力は消えません。</p>
+        <p class="hint"><b>＋新しい症例</b><br>空っぽの新しい記録を作ります。別の患者さんを記録し始めるときに。今の症例は自動保存されるので消えません。</p>
+        <p class="hint"><b>名前を変更</b><br>編集中の症例の名前を変えます（例：「右肩・60代」）。※氏名・施設名は書かないでください。</p>
+        <p class="hint"><b>複製</b><br>今の症例をまるごとコピーしてもう1件作ります。似た内容で別パターンを作りたいときに便利。コピー側に「（複製）」が付きます。</p>
+        <p class="hint"><b>削除</b><br>編集中の症例を消します（元に戻せません）。安全のため最後の1件は消せません。</p>
+        <p class="hint"><b>この症例を書き出し（バックアップ）</b><br>今の症例1件をファイルとして保存します。これが「保険」です。データが消えてもこのファイルで元に戻せます。</p>
+        <p class="hint"><b>全部まとめて書き出し</b><br>保存してある症例を全部まとめて1ファイルに保存します。定期バックアップに。</p>
+        <p class="hint"><b>ファイルから読み込み</b><br>書き出したファイルを選ぶと症例を復元します。別の端末に移すときや、消えたときの復旧に使います（今ある症例は消えません）。</p>
+        <p class="hint">※書き出すファイルは「JSON形式」です。ただのテキストなので、Mac・Windows・スマホのどれでも同じように扱えます（中身を気にする必要はありません。バックアップ用の小さなファイルです）。<br>※記録はこの端末のブラウザ内に自動保存されますが、ブラウザのデータを消すと一緒に消えます。大事な記録は時々「書き出し」で保存しておくと安心です。</p>
+      </div>
+    </details>
   </div>
 
   <!-- 基本情報・スクリーニング（新設・採点対象外） -->
@@ -342,9 +402,23 @@
   <!-- STEP3 -->
   <div class="card">
     <div class="step">STEP3</div><h2>これまでの経過</h2>
-    <label for="s3_history">1回（1時期）ずつ、次の形で書いてください<span class="opt">任意</span></label>
-    <p class="hint">時期／やったこと／狙った仮説／症状の変化。<br>例：3週目 ／ 内側広筋への促通 ／ 支持性↑で圧縮を減らす狙い ／ 立位時間 5→8分</p>
-    <textarea id="s3_history" style="min-height:120px" placeholder="1週目 ／ … ／ … ／ …&#10;3週目 ／ … ／ … ／ …"></textarea>
+    <p class="hint">STEP4「現状評価」は<b>今日、操作せずに測った現状のスナップショット</b>。ここSTEP3は<b>その時々のスナップショット＋やったこと＋反応を、時間順に並べた記録</b>です。今やっていることも、時間が経てば「経過」になります。書き方は下の2つから選べます。</p>
+    <div class="seg" id="s3seg">
+      <button type="button" class="segbtn on" data-mode="recall">回顧モード（既存の症例をふり返る）</button>
+      <button type="button" class="segbtn" data-mode="log">蓄積モード（今日から1回ずつ記録）</button>
+    </div>
+
+    <div id="s3recallWrap">
+      <label for="s3_recall">大きな転機だけを、時間順に<span class="opt">任意</span></label>
+      <p class="hint">全部を細かく思い出さなくてOK。<b>変化が起きた時点</b>（良くなった／悪くなった／やり方を変えた）だけ拾ってください。「変わらなかったこと」も立派な情報です。<br>例：発症直後 立てない → 3週目 内側広筋の促通で立位 5→8分 → 8週目 変化止まる（歩行は伸びず）</p>
+      <textarea id="s3_recall" style="min-height:110px" placeholder="発症直後 ／ … ／ …&#10;○週目 ／ やったこと ／ 指標 5→8分&#10;○週目 ／ 変わらなかったこと"></textarea>
+    </div>
+
+    <div id="s3logWrap" style="display:none">
+      <p class="hint">1回（または1週）ごとに1枚。<b>毎回おなじ指標</b>で before→after を書き、<b>狙い（＝仮説）</b>と<b>変わったこと／変わらなかったこと</b>をセットで残すと、ただの作業リストになりません。STEP4の下の「今日の現状評価を経過に記録」からも1枚作れます。</p>
+      <div id="s3Rows"></div>
+      <button type="button" class="add" id="s3Add">＋ 経過カードを追加</button>
+    </div>
   </div>
 
   <!-- STEP4 -->
@@ -352,6 +426,8 @@
     <div class="step">STEP4</div><h2>現状評価</h2>
     <label for="s4_obs">操作せずに観察・測定した所見（動作・アライメントなど）<span class="opt">任意</span></label>
     <textarea id="s4_obs" placeholder="例：立脚時に膝が内側へ入る／足部回内が強い"></textarea>
+    <button type="button" class="todaybtn" id="s4ToLog" style="margin-top:6px">▶ 今日の現状評価を経過に記録</button>
+    <p class="hint" style="margin-top:4px">今日測ったこの現状を、STEP3「蓄積モード」に1枚のカードとして書き出します（あとで狙い・反応・メモを足せます）。</p>
 
     <details class="fold" id="symFold">
       <summary>シンボル動作スクリーニング　<span class="opt">クリックで開閉</span></summary>
@@ -486,6 +562,7 @@
   <div class="bar">
     <button class="primary" id="genBtn">症例テキストを生成</button>
     <button id="copyBtn">コピー</button>
+    <button class="mini" type="button" id="foldAllBtn">全部たたむ</button>
     <button class="mini" id="clearBtn">入力をクリア</button>
     <span class="savenote" id="saveNote">自動保存：―</span>
   </div>
@@ -493,6 +570,37 @@
   <div id="outbox" class="card">
     <div class="step">生成された症例テキスト（壁打ちLMに貼る）</div>
     <textarea id="output" readonly></textarea>
+  </div>
+
+  <!-- 指導者へ提出（任意・押したときだけ送信） -->
+  <div class="card" id="subCard" style="border-color:#bcd6f0;">
+    <div class="step">指導者へ提出</div>
+    <h2>この症例を指導者に送る</h2>
+    <p class="hint">押したときだけ、生成された症例テキストと使い方の記録が指導者に届きます。指導者はそれを書籍AIに投げてフィードバックを返したり、フォーム改善に役立てます。<b>氏名・生年月日・施設名は送りません</b>（もともと入力していないはずのものです）。送信は任意です。送っても、この端末の記録は消えません。</p>
+    <label for="fb_stuck">今回いちばん迷った／手が止まったところ<span class="opt">任意</span></label>
+    <select id="fb_stuck">
+      <option value="">選ばない</option>
+      <option value="特になし">特になし</option>
+      <option value="STEP0 相談の一点">STEP0 相談の一点</option>
+      <option value="STEP1 ゴール・指標">STEP1 ゴール・指標</option>
+      <option value="STEP2 症状">STEP2 症状</option>
+      <option value="STEP3 これまでの経過">STEP3 これまでの経過</option>
+      <option value="STEP4 現状評価">STEP4 現状評価</option>
+      <option value="STEP5 見立て">STEP5 見立て</option>
+      <option value="STEP6 仮説検証">STEP6 仮説検証</option>
+      <option value="STEP7 撤退基準">STEP7 撤退基準</option>
+      <option value="使い方・操作">使い方・操作</option>
+    </select>
+    <label for="fb_comment">こうなると使いやすい／気づいたこと<span class="opt">任意</span></label>
+    <textarea id="fb_comment" placeholder="例：STEP4のROMの入れ方が分かりにくかった／〇〇の選択肢が欲しい など"></textarea>
+    <div class="chkline" style="margin-top:8px;">
+      <input type="checkbox" id="sub_consent">
+      <label for="sub_consent" style="margin:0;font-weight:600;">この内容（氏名などを含まない症例テキストと使い方の記録）を指導者に送ることに同意します</label>
+    </div>
+    <div class="bar" style="box-shadow:none;border:none;padding:8px 0;position:static;">
+      <button type="button" class="primary" id="submitBtn">指導者へ提出する</button>
+      <span class="savenote" id="subNote"></span>
+    </div>
   </div>
 
   <!-- 清書：発表スライドの下書き -->
@@ -519,12 +627,20 @@
     <textarea id="slText" readonly placeholder="「スライド下書きを作成」を押すと、ここに貼り付け用テキストが出ます。"></textarea>
   </div>
 
-  <p class="disc">このフォームは記述の構造を整えるための学習補助であり、診断・治療方針の決定ではありません。最終的な臨床判断は有資格者と主治医の責任で行ってください。氏名・生年月日・施設名などの個人情報は入力しないでください。入力内容はこの端末のブラウザ内（localStorage）にのみ保存され、外部には送信されません。</p>
+  <p class="disc">このフォームは記述の構造を整えるための学習補助であり、診断・治療方針の決定ではありません。最終的な臨床判断は有資格者と主治医の責任で行ってください。氏名・生年月日・施設名などの個人情報は入力しないでください。入力内容はこの端末のブラウザ内（localStorage）に保存されます。「提出」ボタンを押したときだけ、氏名などを含まない症例テキストと使い方の記録が指導者に送られます（それ以外は外部送信されません）。</p>
 </div>
 
 <script>
 "use strict";
 var STORE = "caseFormStep07V3";
+var FOLD_KEY = "caseFormFoldV1";
+var CASES_KEY = "caseFormCasesV1";
+var NICK_KEY = "caseFormNickV1";
+var FORM_VER = "v3";
+var SESSION_START = Date.now();
+var CASES = null;
+var _featUsed = {};
+function markFeat(k){ _featUsed[k] = 1; }
 
 /* 部位 → 組織候補（発生源・①発生源に使う） */
 var REGIONS = {
@@ -605,14 +721,14 @@ var DX_KEYWORDS = [
 
 /* 固定単一入力欄 */
 var FIELDS = ["g_consent","g_nick","bi_part","bi_side","bi_age","bi_dx","bi_hx_other",
-  "s0_topic","s1_goal","s1_metric","s2_chief","s2_nrs","s2_trigger","s3_history",
+  "s0_topic","s1_goal","s1_metric","s2_chief","s2_nrs","s2_trigger","s3_recall",
   "s4_obs","s4_other","s4_cand","s5_source","s5_load","s5_problem","s5_type",
-  "s7_metric","s7_when","s7_thresh","s7_exit"];
+  "s7_metric","s7_when","s7_thresh","s7_exit","fb_stuck","fb_comment"];
 
 /* 分析に効く欄（未入力なら分析AIへ「不足」として渡す） */
 var ANALYSIS = [
   ["bi_part","部位"],["s0_topic","STEP0 相談の一点"],["s1_goal","STEP1 上位ゴール"],["s1_metric","STEP1 指標"],
-  ["s2_chief","STEP2 主訴"],["s2_nrs","STEP2 NRS"],["s2_trigger","STEP2 誘発条件"],["s3_history","STEP3 経過"],
+  ["s2_chief","STEP2 主訴"],["s2_nrs","STEP2 NRS"],["s2_trigger","STEP2 誘発条件"],
   ["s4_obs","STEP4 観察所見"],["s4_cand","STEP4 発生源候補"],
   ["s5_source","STEP5 ①発生源"],["s5_load","STEP5 ②負荷様式"],["s5_problem","STEP5 ③問題点"],["s5_type","STEP5 ④タイプ"],
   ["s7_metric","STEP7 指標"],["s7_when","STEP7 期間"],["s7_thresh","STEP7 閾値"],["s7_exit","STEP7 見切りライン"]
@@ -988,6 +1104,93 @@ function readSymp2(){
 }
 el("symp2Add").onclick = function(){ addSymp2(); save(); };
 (function(){ var t=el("tissueHint"); if(t){ t.onchange=function(){ document.body.classList.toggle("hintOn", t.checked); save(); }; } })();
+
+/* ---- STEP3 経過（蓄積モード）カード＋モード切替 ---- */
+function s3MetricName(){ return (el("s1_metric")&&el("s1_metric").value||"").trim(); }
+function s3ModeNow(){ var on=el("s3seg").querySelector(".segbtn.on"); return on?on.getAttribute("data-mode"):"recall"; }
+function setS3Mode(mode){
+  if(mode!=="log") mode="recall";
+  el("s3recallWrap").style.display = (mode==="log") ? "none" : "";
+  el("s3logWrap").style.display = (mode==="log") ? "" : "none";
+  el("s3seg").querySelectorAll(".segbtn").forEach(function(btn){ btn.classList.toggle("on", btn.getAttribute("data-mode")===mode); });
+}
+function addS3(data){
+  data = data || {};
+  var card = ce("div","s3card dynrow");
+  card.innerHTML =
+    '<div class="s3top">'+
+      '<input type="text" class="s3_when" placeholder="時期・日付（例：3週目 / 2026-08-09）">'+
+      '<button type="button" class="todaybtn s3today">今日</button>'+
+      '<button type="button" class="rm">×</button>'+
+    '</div>'+
+    '<div class="s3lbl">指標（STEP1と同じ指標で。前→後）</div>'+
+    '<div class="s3top">'+
+      '<input type="text" class="s3_mname" placeholder="指標名（例：連続歩行）">'+
+      '<button type="button" class="mini s3useM">STEP1の指標を使う</button>'+
+    '</div>'+
+    '<div class="s3grid">'+
+      '<input type="text" class="s3_before" placeholder="前（例：5分）">'+
+      '<input type="text" class="s3_after" placeholder="後（例：8分）">'+
+    '</div>'+
+    '<div class="s3lbl">やったこと</div>'+
+    '<input type="text" class="s3_did" placeholder="例：内側広筋への促通">'+
+    '<div class="s3lbl">狙い（＝どんな仮説で？）</div>'+
+    '<input type="text" class="s3_aim" placeholder="例：支持性を上げて膝の圧縮を減らす">'+
+    '<div class="s3grid">'+
+      '<div><div class="s3lbl">変わったこと</div><input type="text" class="s3_changed" placeholder="例：立位時間が延びた"></div>'+
+      '<div><div class="s3lbl">変わらなかったこと</div><input type="text" class="s3_same" placeholder="例：歩行時痛は不変"></div>'+
+    '</div>'+
+    '<div class="s3lbl">メモ<span class="opt">任意</span></div>'+
+    '<input type="text" class="s3_memo" placeholder="気づき・次への申し送りなど">';
+  card.querySelector(".s3_when").value=data.when||"";
+  card.querySelector(".s3_mname").value=data.mname||"";
+  card.querySelector(".s3_before").value=data.before||"";
+  card.querySelector(".s3_after").value=data.after||"";
+  card.querySelector(".s3_did").value=data.did||"";
+  card.querySelector(".s3_aim").value=data.aim||"";
+  card.querySelector(".s3_changed").value=data.changed||"";
+  card.querySelector(".s3_same").value=data.same||"";
+  card.querySelector(".s3_memo").value=data.memo||"";
+  card.querySelector(".rm").onclick=function(){ card.remove(); save(); };
+  card.querySelector(".s3today").onclick=function(){
+    var d=new Date();
+    card.querySelector(".s3_when").value=d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2);
+    save();
+  };
+  card.querySelector(".s3useM").onclick=function(){
+    var m=s3MetricName();
+    if(m){ card.querySelector(".s3_mname").value=m; save(); } else { alert("STEP1の指標がまだ入力されていません。"); }
+  };
+  el("s3Rows").appendChild(card);
+  card.querySelectorAll("input").forEach(function(i){ i.addEventListener("input", save); });
+}
+function readS3(){
+  var out=[];
+  el("s3Rows").querySelectorAll(".dynrow").forEach(function(card){
+    var g=function(c){ return card.querySelector(c).value.trim(); };
+    var o={when:g(".s3_when"),mname:g(".s3_mname"),before:g(".s3_before"),after:g(".s3_after"),
+      did:g(".s3_did"),aim:g(".s3_aim"),changed:g(".s3_changed"),same:g(".s3_same"),memo:g(".s3_memo")};
+    if(o.when||o.mname||o.before||o.after||o.did||o.aim||o.changed||o.same||o.memo) out.push(o);
+  });
+  return out;
+}
+el("s3Add").onclick=function(){ addS3(); save(); };
+el("s3seg").querySelectorAll(".segbtn").forEach(function(btn){
+  btn.onclick=function(){ setS3Mode(btn.getAttribute("data-mode")); save(); };
+});
+(function(){
+  var b=el("s4ToLog"); if(!b) return;
+  b.onclick=function(){
+    setS3Mode("log");
+    var d=new Date();
+    var ds=d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2);
+    var obs=(el("s4_obs").value||"").trim();
+    addS3({when:ds+"（今日）", mname:s3MetricName(), memo:obs?("現状評価より："+obs):""});
+    save();
+    el("saveNote").textContent="STEP3（蓄積）に今日のカードを追加しました";
+    var last=el("s3Rows").lastChild; if(last&&last.scrollIntoView) last.scrollIntoView({behavior:"smooth",block:"center"});
+  };
+})();
 /* 部位を選ぶと、ブック確認ボタンにその部位名を表示 */
 function syncBookBtn(selId, btnId){
   var s=el(selId), b=el(btnId); if(!s||!b) return;
@@ -1143,7 +1346,7 @@ function addHv(data){
   b.querySelector(".mv").onclick = function(){ moveHvToHistory(b); };
   el("hvBlocks").appendChild(b); renumberHv();
 }
-/* STEP6の完了案を、日付つきでSTEP3のこれまでの経過へ移動（移動後は削除） */
+/* STEP6の完了案を、日付つきでSTEP3の経過（蓄積カード）へ移動（移動後は削除） */
 function moveHvToHistory(b){
   var hypo=b.querySelector(".hv_hypo").value.trim();
   var op=b.querySelector(".hv_op").value.trim();
@@ -1153,18 +1356,16 @@ function moveHvToHistory(b){
   var follow=b.querySelector(".hv_follow").value.trim();
   if(!(hypo||op||res||read||gate||follow)){ alert("移動する内容がありません。まず記入してください。"); return; }
   var d=new Date();
-  var ds=d.getFullYear()+"/"+("0"+(d.getMonth()+1)).slice(-2)+"/"+("0"+d.getDate()).slice(-2);
-  var line=ds+" ／ "+(op||"（操作未記入）")+" ／ "+(hypo||"（仮説未記入）")+" ／ "+(res||"（結果未記入）");
-  if(read) line+=" ／ 解釈:"+read;
-  if(gate) line+=" ／ 関門:"+gate;
-  if(follow) line+=" ／ その後:"+follow;
-  var ta=el("s3_history");
-  ta.value = (ta.value.trim() ? (ta.value.replace(/\s*$/,"")+"\n") : "") + line;
+  var ds=d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2);
+  var memo=[]; if(read) memo.push("解釈:"+read); if(gate) memo.push("関門:"+gate); if(follow) memo.push("その後:"+follow);
+  setS3Mode("log");
+  addS3({when:ds, mname:s3MetricName(), did:op||"（操作未記入）", aim:hypo||"（仮説未記入）",
+    changed:res||"（結果未記入）", memo:memo.join(" ／ ")});
   var wasLast = el("hvBlocks").querySelectorAll(".hvblock").length<=1;
   b.remove();
   if(wasLast) addHv();
   renumberHv(); save();
-  el("saveNote").textContent="STEP3へ移動しました（"+ds+"）";
+  el("saveNote").textContent="STEP3（蓄積）へ移動しました（"+ds+"）";
 }
 function renumberHv(){
   el("hvBlocks").querySelectorAll(".hvblock").forEach(function(b,i){ b.querySelector(".hvtitle").textContent="案 "+(i+1); });
@@ -1180,6 +1381,226 @@ function readHv(){
 }
 el("hvAdd").onclick = function(){ addHv(); save(); };
 
+/* ---- 症例ストア（複数保存・切替・書き出し／読み込み） ---- */
+function newId(){ return "c"+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function blankCases(){
+  var id=newId(); var m={};
+  m[id]={name:"症例1",created:Date.now(),updated:Date.now(),state:null,submits:0};
+  return {active:id, order:[id], map:m};
+}
+function loadCases(){
+  var c=null;
+  try{ c=JSON.parse(localStorage.getItem(CASES_KEY)||"null"); }catch(e){}
+  if(c && c.map && c.order && c.order.length){ CASES=c; return CASES; }
+  /* 旧・単一保存(STORE)からの移行 */
+  var legacy=null; try{ legacy=JSON.parse(localStorage.getItem(STORE)||"null"); }catch(e2){}
+  CASES=blankCases();
+  if(legacy){ var id0=CASES.order[0]; CASES.map[id0].state=legacy; CASES.map[id0].name="症例1（これまでの入力）"; }
+  try{ persistCases(); }catch(e3){}
+  return CASES;
+}
+function persistCases(){ localStorage.setItem(CASES_KEY, JSON.stringify(CASES)); }
+function activeCase(){ if(!CASES) return null; return CASES.map[CASES.active]||null; }
+function caseCount(){ return CASES?CASES.order.length:0; }
+function applyNick(){ try{ var nk=el("g_nick"); var v=localStorage.getItem(NICK_KEY); if(nk && v!=null && !nk.value){ nk.value=v; } }catch(e){} }
+function clearInputsDOM(){
+  FIELDS.forEach(function(f){ if(f==="g_nick") return; var n=el(f); if(!n) return; if(n.type==="checkbox") n.checked=false; else n.value=""; });
+  setChecks("hx_", HX_ITEMS.length, []); setChecks("rf_", RF_ITEMS.length, []);
+  recData=[]; recRegions=[];
+}
+function resetForm(){ clearInputsDOM(); restore(); }
+function switchCaseTo(id){
+  if(!CASES||!CASES.map[id]) return;
+  save();
+  CASES.active=id; persistCases();
+  clearInputsDOM(); restore();
+  renderCaseSelect(); updateCaseMeta();
+  el("saveNote").textContent="症例を切り替えました：「"+CASES.map[id].name+"」";
+  markFeat("case_switch");
+}
+function makeNewCase(){
+  save();
+  var id=newId(); var n=caseCount()+1;
+  CASES.map[id]={name:"症例"+n,created:Date.now(),updated:Date.now(),state:null,submits:0};
+  CASES.order.push(id); CASES.active=id; persistCases();
+  clearInputsDOM(); restore();
+  renderCaseSelect(); updateCaseMeta();
+  el("saveNote").textContent="新しい症例を作りました：「"+CASES.map[id].name+"」";
+  markFeat("case_new");
+}
+function dupActiveCase(){
+  save();
+  var cur=activeCase(); if(!cur) return;
+  var id=newId();
+  CASES.map[id]={name:cur.name+"（複製）",created:Date.now(),updated:Date.now(),state:cur.state?JSON.parse(JSON.stringify(cur.state)):null,submits:0};
+  var idx=CASES.order.indexOf(CASES.active); CASES.order.splice(idx+1,0,id); CASES.active=id; persistCases();
+  clearInputsDOM(); restore();
+  renderCaseSelect(); updateCaseMeta();
+  el("saveNote").textContent="症例を複製しました：「"+CASES.map[id].name+"」";
+  markFeat("case_dup");
+}
+function renameActiveCase(){
+  var cur=activeCase(); if(!cur) return;
+  var v=prompt("この症例の名前を入力してください（氏名・施設名は書かないでください）", cur.name);
+  if(v==null) return; v=v.trim(); if(!v) return;
+  cur.name=v; cur.updated=Date.now(); persistCases(); renderCaseSelect(); updateCaseMeta();
+  markFeat("case_rename");
+}
+function delActiveCase(){
+  if(!CASES) return;
+  if(caseCount()<=1){ alert("最後の1件は削除できません。新しい症例を作ってから削除してください。"); return; }
+  var cur=activeCase(); if(!cur) return;
+  if(!confirm("症例「"+cur.name+"」を削除します。よろしいですか？（元に戻せません）")) return;
+  var idx=CASES.order.indexOf(CASES.active);
+  delete CASES.map[CASES.active];
+  CASES.order.splice(idx,1);
+  CASES.active=CASES.order[Math.max(0,idx-1)];
+  persistCases();
+  clearInputsDOM(); restore();
+  renderCaseSelect(); updateCaseMeta();
+  el("saveNote").textContent="症例を削除しました。";
+  markFeat("case_del");
+}
+function renderCaseSelect(){
+  var sel=el("caseSel"); if(!sel||!CASES) return;
+  sel.innerHTML="";
+  CASES.order.forEach(function(id){
+    var c=CASES.map[id]; if(!c) return;
+    var op=document.createElement("option"); op.value=id;
+    op.textContent=c.name+(id===CASES.active?"（編集中）":"");
+    if(id===CASES.active) op.selected=true;
+    sel.appendChild(op);
+  });
+}
+function updateCaseMeta(){
+  var m=el("caseMeta"); if(!m||!CASES) return;
+  var c=activeCase(); if(!c){ m.textContent=""; return; }
+  var d=new Date(c.updated||c.created||Date.now());
+  var stamp=(d.getMonth()+1)+"/"+d.getDate()+" "+("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2);
+  m.textContent="現在保存されているデータは "+caseCount()+" 件。編集中：「"+c.name+"」（最終更新 "+stamp+(c.submits?("／提出 "+c.submits+"回"):"")+"）";
+}
+function dlJson(filename, text){
+  try{
+    var blob=new Blob([text],{type:"application/json"});
+    var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=filename;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ try{URL.revokeObjectURL(a.href);}catch(e){} a.remove(); }, 100);
+  }catch(e){ alert("書き出しに失敗しました。"); }
+}
+function exportActiveCase(){
+  save();
+  var c=activeCase(); if(!c) return;
+  var pack={type:"caseForm.case",ver:FORM_VER,exported:Date.now(),name:c.name,"case":c};
+  var safe=(c.name||"症例").replace(/[\\/:*?"<>|]/g,"_");
+  dlJson("症例_"+safe+".json", JSON.stringify(pack,null,2));
+  markFeat("export_one");
+}
+function exportAllCases(){
+  save();
+  var pack={type:"caseForm.all",ver:FORM_VER,exported:Date.now(),cases:CASES};
+  dlJson("症例まとめ_全"+caseCount()+"件.json", JSON.stringify(pack,null,2));
+  markFeat("export_all");
+}
+function importCasesFromText(txt){
+  var data=null; try{ data=JSON.parse(txt); }catch(e){ alert("読み込めませんでした（ファイルの形式が違うようです）。"); return; }
+  var added=0, lastId=null;
+  function addOne(c){
+    if(!c||typeof c!=="object") return null;
+    var id=newId();
+    CASES.map[id]={name:(c.name||"読み込んだ症例"),created:c.created||Date.now(),updated:c.updated||Date.now(),state:c.state||null,submits:c.submits||0};
+    CASES.order.push(id); added++; return id;
+  }
+  if(data.type==="caseForm.all" && data.cases && data.cases.map && data.cases.order){
+    data.cases.order.forEach(function(oid){ var r=addOne(data.cases.map[oid]); if(r) lastId=r; });
+  } else if(data.type==="caseForm.case" && data["case"]){
+    lastId=addOne(data["case"]);
+  } else if(data.map && data.order){
+    data.order.forEach(function(oid){ var r=addOne(data.map[oid]); if(r) lastId=r; });
+  } else if(data.state || data.name){
+    lastId=addOne(data);
+  } else { alert("読み込めるデータが見つかりませんでした。"); return; }
+  if(added===0){ alert("読み込めるデータが見つかりませんでした。"); return; }
+  if(lastId) CASES.active=lastId;
+  persistCases();
+  clearInputsDOM(); restore();
+  renderCaseSelect(); updateCaseMeta();
+  el("saveNote").textContent=added+" 件の症例を読み込みました。";
+  markFeat("import");
+}
+
+/* ---- 指導者へ提出（Googleシート等へ送信） ---- */
+function getEndpoint(){ try{ return (window.__FORMCFG && window.__FORMCFG.collectEndpoint) || ""; }catch(e){ return ""; } }
+function collectMetrics(){
+  var st=currentState();
+  var counts={
+    symp2:(st.symp2||[]).length,
+    s3log:(st.s3log||[]).length,
+    hv:(st.hv||[]).filter(function(x){return x&&(x.hypo||x.op||x.res);}).length,
+    rom:(st.rom||[]).filter(function(x){return x&&(x.val||x.part);}).length,
+    mmt:(st.mmt||[]).filter(function(x){return x&&(x.val||x.part);}).length
+  };
+  var filled=0,total=0;
+  ["s0_topic","s1_goal","s1_metric","s2_chief","s4_obs","s5_source","s5_load","s5_problem","s7_metric","s7_thresh","s7_exit"].forEach(function(k){
+    total++; if((st[k]||"").toString().trim()) filled++;
+  });
+  return {
+    counts:counts, coreFilled:filled, coreTotal:total,
+    s3mode:st.s3mode||"", region:st.bi_part||"",
+    features:Object.keys(_featUsed),
+    elapsedMs:Date.now()-SESSION_START,
+    viewport:(window.innerWidth||0)+"x"+(window.innerHeight||0),
+    ua:navigator.userAgent||""
+  };
+}
+function bumpSubmit(){ var c=activeCase(); if(c){ c.submits=(c.submits||0)+1; c.updated=Date.now(); persistCases(); updateCaseMeta(); } }
+function postCollect(url, payload, onok, onerr){
+  var body=JSON.stringify(payload);
+  fetch(url, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:body})
+    .then(function(r){ if(!r.ok) throw new Error("http "+r.status); return r.text(); })
+    .then(function(){ onok&&onok(false); })
+    .catch(function(){
+      /* CORS等で応答が読めない環境向けフォールバック（送信は届く想定・応答は確認しない） */
+      try{
+        fetch(url, {method:"POST", mode:"no-cors", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:body});
+        onok&&onok(true);
+      }catch(e){ onerr&&onerr(); }
+    });
+}
+function submitCase(){
+  if(!el("sub_consent") || !el("sub_consent").checked){
+    el("subNote").textContent="送信するには同意のチェックが必要です。"; return;
+  }
+  save();
+  var url=getEndpoint();
+  var c=activeCase();
+  var payload={
+    type:"caseForm.submit", ver:FORM_VER, ts:new Date().toISOString(),
+    nickname:(el("g_nick")?el("g_nick").value.trim():""),
+    caseId:CASES?CASES.active:"", caseName:c?c.name:"",
+    submitCount:(c?(c.submits||0):0)+1,
+    consentNoPII:!!(el("g_consent")&&el("g_consent").checked),
+    region:(el("bi_part")?el("bi_part").value:""),
+    generatedText:build(),
+    state:currentState(),
+    metrics:collectMetrics(),
+    feedback:{ stuck:(el("fb_stuck")?el("fb_stuck").value:""), comment:(el("fb_comment")?el("fb_comment").value.trim():"") }
+  };
+  if(!url){
+    el("subNote").textContent="送信先が未設定のため、提出用ファイルを書き出しました（指導者にお渡しください）。";
+    dlJson("提出_"+(payload.nickname||"匿名")+"_"+Date.now()+".json", JSON.stringify(payload,null,2));
+    bumpSubmit(); markFeat("submit_file"); return;
+  }
+  el("subNote").textContent="送信中…"; el("submitBtn").disabled=true;
+  postCollect(url, payload, function(noResp){
+    bumpSubmit(); el("submitBtn").disabled=false;
+    el("subNote").textContent=noResp?"提出しました（送信済み）。ありがとうございました。":"提出しました。ありがとうございました。";
+  }, function(){
+    el("submitBtn").disabled=false;
+    el("subNote").textContent="送信に失敗しました。通信環境を確認して再度お試しください（『書き出し』でバックアップも取れます）。";
+  });
+  markFeat("submit");
+}
+
 /* ---- 保存 / 復元 ---- */
 function currentState(){
   var o={};
@@ -1188,6 +1609,7 @@ function currentState(){
   o.rf = readChecks("rf_", RF_ITEMS.length);
   o.rom = readRows("romRows"); o.mmt = readRows("mmtRows"); o.hv = readHv();
   o.symp2 = readSymp2();
+  o.s3mode = s3ModeNow(); o.s3log = readS3();
   o.s2chiefChars = readChiefChars();
   o.tissueHint = el("tissueHint") ? el("tissueHint").checked : false;
   o.rec = recData.slice();
@@ -1197,12 +1619,19 @@ function currentState(){
 }
 function save(){
   try{
-    localStorage.setItem(STORE, JSON.stringify(currentState()));
+    if(!CASES) CASES = loadCases();
+    var c = activeCase();
+    if(c){ c.state = currentState(); c.updated = Date.now(); }
+    persistCases();
+    try{ var nk=el("g_nick"); if(nk) localStorage.setItem(NICK_KEY, nk.value||""); }catch(e2){}
     var d=new Date(); el("saveNote").textContent="自動保存："+("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2);
-  }catch(e){ el("saveNote").textContent="自動保存：不可"; }
+    updateCaseMeta();
+  }catch(e){ el("saveNote").textContent="自動保存：不可（容量オーバーの可能性）"; }
 }
 function restore(){
-  var o=null; try{ o=JSON.parse(localStorage.getItem(STORE)||"null"); }catch(e){}
+  if(!CASES) CASES = loadCases();
+  var c = activeCase();
+  var o = c ? c.state : null;
   renderSym();
   if(o){
     FIELDS.forEach(function(f){ var n=el(f); if(!n||!(f in o)) return; if(n.type==="checkbox") n.checked=!!o[f]; else n.value=o[f]; });
@@ -1224,6 +1653,9 @@ function restore(){
   el("symp2Rows").innerHTML="";
   if(o&&o.symp2&&o.symp2.length){ o.symp2.forEach(function(x){ addSymp2(x); }); }
   else { addSymp2(); }
+  el("s3Rows").innerHTML="";
+  if(o&&o.s3log&&o.s3log.length){ o.s3log.forEach(function(x){ addS3(x); }); }
+  setS3Mode((o&&o.s3mode)||"recall");
   buildChars(el("chiefChars"), (o&&o.s2chiefChars)||{});
   var th=el("tissueHint"); if(th){ th.checked=!!(o&&o.tissueHint); document.body.classList.toggle("hintOn", th.checked); }
   applyRegion(); updateRfBanner();
@@ -1248,6 +1680,8 @@ function build(){
   var L=[];
   // 未入力チェック（分析AI向け）
   var missing=[]; ANALYSIS.forEach(function(a){ if(!v(a[0])) missing.push(a[1]); });
+  var s3ok=(s3ModeNow()==="log") ? readS3().length>0 : !!v("s3_recall");
+  if(!s3ok) missing.push("STEP3 経過");
   var hv0=readHv().filter(function(h){return h.hypo||h.op||h.res||h.read||h.gate||h.follow;});
   var hvComplete=readHv().some(function(h){return h.hypo&&h.op&&h.res&&h.read&&h.gate;});
   if(!hvComplete) missing.push("STEP6 仮説検証（4点＋関門が揃った案）");
@@ -1286,8 +1720,26 @@ function build(){
     });
   } else { L.push("　その他の症状：なし／未記入"); }
   L.push("");
-  L.push("STEP3 これまでの経過（時期／やったこと／狙った仮説／症状の変化）");
-  L.push(vb("s3_history")); L.push("");
+  if(s3ModeNow()==="log"){
+    L.push("STEP3 これまでの経過（蓄積：時期／指標 前→後／やったこと／狙い(仮説)／変わったこと／変わらなかったこと）");
+    var s3l=readS3();
+    if(s3l.length){
+      s3l.forEach(function(x){
+        var t="　・"+(x.when||"時期未記入");
+        if(x.mname||x.before||x.after){ t+=" ／ 指標:"+(x.mname?x.mname+" ":"")+(x.before||"?")+"→"+(x.after||"?"); }
+        if(x.did) t+=" ／ やったこと:"+x.did;
+        if(x.aim) t+=" ／ 狙い:"+x.aim;
+        if(x.changed) t+=" ／ 変化:"+x.changed;
+        if(x.same) t+=" ／ 不変:"+x.same;
+        if(x.memo) t+=" ／ メモ:"+x.memo;
+        L.push(t);
+      });
+    } else { L.push("　（未入力）"); }
+  } else {
+    L.push("STEP3 これまでの経過（回顧：転機を時間順に）");
+    L.push(vb("s3_recall"));
+  }
+  L.push("");
   L.push("STEP4 現状評価");
   L.push("　観察所見："+vb("s4_obs"));
   var sym=readSym().filter(function(s){return s.r||s.num||s.memo;});
@@ -1358,17 +1810,22 @@ el("copyBtn").onclick = function(){
   }catch(e){ document.execCommand("copy"); }
 };
 el("clearBtn").onclick = function(){
-  if(!confirm("入力をすべて消去します。よろしいですか？")) return;
-  FIELDS.forEach(function(f){ var n=el(f); if(!n) return; if(n.type==="checkbox") n.checked=false; else n.value=""; });
+  if(!confirm("この症例の入力をすべて消去します。よろしいですか？（症例自体は残ります）")) return;
+  FIELDS.forEach(function(f){ if(f==="g_nick") return; var n=el(f); if(!n) return; if(n.type==="checkbox") n.checked=false; else n.value=""; });
   setChecks("hx_",HX_ITEMS.length,[]); setChecks("rf_",RF_ITEMS.length,[]);
   el("romRows").innerHTML=""; addRow("romRows");
   el("mmtRows").innerHTML=""; addRow("mmtRows");
   el("hvBlocks").innerHTML=""; addHv();
+  el("symp2Rows").innerHTML=""; addSymp2();
+  el("s3Rows").innerHTML=""; setS3Mode("recall");
+  buildChars(el("chiefChars"), {});
   recData=[]; recRegions=[]; renderRec(); el("recBooks").innerHTML=""; el("recNote").textContent="";
   renderSym();
   el("outbox").style.display="none"; el("s5warn").style.display="none";
+  var th=el("tissueHint"); if(th){ th.checked=false; document.body.classList.toggle("hintOn", false); }
   applyRegion(); updateRfBanner();
-  el("saveNote").textContent="自動保存：―";
+  save();
+  el("saveNote").textContent="この症例の入力をすべて消去しました（症例自体は残ります）。";
   window.scrollTo({top:0,behavior:"smooth"});
 };
 
@@ -1522,7 +1979,76 @@ document.addEventListener("change", function(e){
   };
 })();
 
+/* ---- 各STEPカードの開閉（折りたたみ） ---- */
+function foldCards(){ return document.querySelectorAll(".wrap > .card[data-fold]"); }
+function saveFold(){
+  var o={}; foldCards().forEach(function(c){ if(c.classList.contains("collapsed")) o[c.getAttribute("data-fold")]=1; });
+  try{ localStorage.setItem(FOLD_KEY, JSON.stringify(o)); }catch(e){}
+}
+function syncFoldBtn(){
+  var b=el("foldAllBtn"); if(!b) return;
+  var anyOpen=false; foldCards().forEach(function(c){ if(!c.classList.contains("collapsed")) anyOpen=true; });
+  b.textContent = anyOpen ? "全部たたむ" : "全部ひらく";
+}
+function setAllFold(collapsed){
+  foldCards().forEach(function(c){ c.classList.toggle("collapsed", collapsed); });
+  saveFold(); syncFoldBtn();
+}
+function initCardFold(){
+  var saved={}; try{ saved=JSON.parse(localStorage.getItem(FOLD_KEY)||"{}"); }catch(e){}
+  var i=0;
+  document.querySelectorAll(".wrap > .card").forEach(function(card){
+    var step=card.querySelector(":scope > .step");
+    var h2=card.querySelector(":scope > h2");
+    if(!step||!h2) return;
+    var id=(step.textContent||("card"+i)).trim(); i++;
+    card.setAttribute("data-fold", id);
+    var head=ce("div","cardhead");
+    var txt=ce("div","headtxt");
+    var caret=ce("span","caret"); caret.setAttribute("aria-hidden","true"); caret.textContent="▾";
+    card.insertBefore(head, step);
+    txt.appendChild(step); txt.appendChild(h2);
+    head.appendChild(txt); head.appendChild(caret);
+    var body=ce("div","cardbody");
+    while(head.nextSibling){ body.appendChild(head.nextSibling); }
+    card.appendChild(body);
+    head.onclick=function(){ card.classList.toggle("collapsed"); saveFold(); syncFoldBtn(); markFeat("fold"); };
+    if(saved[id]) card.classList.add("collapsed");
+  });
+  var b=el("foldAllBtn");
+  if(b){ b.onclick=function(){
+    var anyOpen=false; foldCards().forEach(function(c){ if(!c.classList.contains("collapsed")) anyOpen=true; });
+    setAllFold(anyOpen);
+  }; }
+  syncFoldBtn();
+}
+
+/* ---- 症例の管理・提出のボタン配線 ---- */
+CASES = loadCases();
+(function(){
+  var sel=el("caseSel"); if(sel){ sel.onchange=function(){ switchCaseTo(sel.value); }; }
+  var map=[["caseNew",makeNewCase],["caseRename",renameActiveCase],["caseDup",dupActiveCase],
+    ["caseDel",delActiveCase],["caseExport",exportActiveCase],["caseExportAll",exportAllCases]];
+  map.forEach(function(p){ var b=el(p[0]); if(b) b.onclick=p[1]; });
+  var imp=el("caseImport"), impf=el("caseImportFile");
+  if(imp&&impf){
+    imp.onclick=function(){ impf.value=""; impf.click(); };
+    impf.onchange=function(){
+      var f=impf.files&&impf.files[0]; if(!f) return;
+      var rd=new FileReader();
+      rd.onload=function(){ importCasesFromText(String(rd.result||"")); };
+      rd.onerror=function(){ alert("ファイルを読み込めませんでした。"); };
+      rd.readAsText(f);
+    };
+  }
+  var sb=el("submitBtn"); if(sb) sb.onclick=submitCase;
+})();
+
+initCardFold();
 restore();
+applyNick();
+renderCaseSelect();
+updateCaseMeta();
 checkS5();
 </script>
 

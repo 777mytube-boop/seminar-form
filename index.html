@@ -210,7 +210,7 @@
   function unlock(){ if(g&&g.parentNode) g.parentNode.removeChild(g); document.body.style.overflow=""; }
   document.body.style.overflow="hidden";
   /* 同じタブ内で一度入室していれば、そのセッション中は再確認しない（タブを閉じれば再確認） */
-  try{ if(sessionStorage.getItem(KEY)==="1"){ unlock(); return; } }catch(e){}
+  var alreadyIn=false; try{ alreadyIn=(sessionStorage.getItem(KEY)==="1"); }catch(e){} if(alreadyIn){ unlock(); }
   var CFG=null;
   function showStopped(m){ if(msg) msg.textContent = m || "このフォームは現在ご利用いただけません。"; if(form) form.style.display="none"; }
   function showLogin(m){ if(msg) msg.textContent = m || "パスワードを入力してください"; if(form) form.style.display="block"; var i=document.getElementById("gatePw"); if(i){ setTimeout(function(){ i.focus(); },50); } }
@@ -227,13 +227,13 @@
     .then(function(r){ if(!r.ok) throw new Error("http "+r.status); return r.json(); })
     .then(function(cfg){
       CFG=cfg;
-      try{ window.__FORMCFG = cfg; }catch(e){}
+      try{ window.__FORMCFG = cfg; }catch(e){} if(alreadyIn){ return; }
       if(cfg.enabled===false){ showStopped(cfg.message||"このフォームは現在停止中です。管理者にお問い合わせください。"); }
       else { showLogin(cfg.message||null); }
     })
     .catch(function(){
       /* 設定を取得できない＝オフライン、または管理者が config.json を停止/削除。安全側に倒してロック。 */
-      showStopped("現在このフォームはご利用いただけません（ネット接続を確認するか、管理者にお問い合わせください）。");
+      if(alreadyIn){ return; } showStopped("現在このフォームはご利用いただけません（ネット接続を確認するか、管理者にお問い合わせください）。");
     });
 })();
 </script>
